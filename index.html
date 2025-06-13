@@ -2,20 +2,120 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Matrix Solver</title>
-  <link rel="stylesheet" href="style.css">
+  <title>n × n Matrix Solver</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body { font-family: Arial, sans-serif; background: #f0f4f8; margin: 0; padding: 20px; display: flex; justify-content: center; }
+    .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 800px; width: 100%; }
+    h1 { text-align: center; color: #333; }
+    input[type=number] { width: 80px; padding: 8px; margin: 4px; border: 1px solid #ccc; border-radius: 5px; }
+    button { padding: 10px 20px; margin-top: 15px; background: #00796b; color: white; border: none; border-radius: 8px; cursor: pointer; }
+    button:hover { background: #004d40; }
+    .matrix-row { display: flex; align-items: center; margin-bottom: 10px; }
+    .matrix-row span { margin: 0 10px; font-weight: bold; }
+    #result { margin-top: 20px; font-size: 1.2em; color: #333; font-weight: bold; }
+  </style>
 </head>
 <body>
+
   <div class="container">
     <h1>n × n Linear Equation Solver</h1>
-    <label for="size">Enter Matrix Size (n): </label>
-    <input type="number" id="size" min="2" value="2" />
-    <div id="matrix-input"></div>
-    <button id="solve-btn">Solve</button>
+    <label for="size">Matrix Size (n):</label>
+    <input type="number" id="size" min="2" max="6" value="2" />
+    <button id="generate-btn">Generate Matrix</button>
+    
+    <div id="matrix-input" style="margin-top:20px;"></div>
+    <button id="solve-btn" style="display:none;">Solve</button>
+
     <div id="result"></div>
   </div>
-  <script src="app.js"></script>
-<link rel="stylesheet" href="style.css">
-<script src="app.js"></script>
+
+  <script>
+    function createInputs(n) {
+      const container = document.getElementById('matrix-input');
+      container.innerHTML = '';
+      for (let i = 0; i < n; i++) {
+        const row = document.createElement('div');
+        row.className = 'matrix-row';
+        for (let j = 0; j < n; j++) {
+          const inA = document.createElement('input');
+          inA.type = 'number'; inA.id = `a_${i}_${j}`; inA.placeholder = `a${i+1}${j+1}`;
+          row.appendChild(inA);
+        }
+        row.appendChild(document.createElement('span')).innerText = '=';
+        const inC = document.createElement('input');
+        inC.type = 'number'; inC.id = `c_${i}`; inC.placeholder = `b${i+1}`;
+        row.appendChild(inC);
+        container.appendChild(row);
+      }
+      document.getElementById('solve-btn').style.display = 'inline-block';
+      document.getElementById('result').innerText = '';
+    }
+
+    function readMatrix(n) {
+      const A = [], B = [];
+      for (let i = 0; i < n; i++) {
+        const row = [];
+        for (let j = 0; j < n; j++) {
+          const val = parseFloat(document.getElementById(`a_${i}_${j}`).value);
+          row.push(isNaN(val)? 0 : val);
+        }
+        A.push(row);
+        const cv = parseFloat(document.getElementById(`c_${i}`).value);
+        B.push(isNaN(cv)? 0 : cv);
+      }
+      return {A, B};
+    }
+
+    function det(M) {
+      const n = M.length;
+      if (n === 1) return M[0][0];
+      if (n === 2) return M[0][0]*M[1][1] - M[0][1]*M[1][0];
+      let d = 0;
+      for (let c = 0; c < n; c++) {
+        const minor = M.slice(1).map(r => r.filter((_, j) => j !== c));
+        d += ((c%2===0?1:-1) * M[0][c] * det(minor));
+      }
+      return d;
+    }
+
+    function inverse(M) {
+      const n = M.length;
+      const D = det(M);
+      if (D === 0) return null;
+      const cof = [];
+      for (let i = 0; i < n; i++) {
+        cof[i] = [];
+        for (let j = 0; j < n; j++) {
+          const minor = M.filter((_, r) => r !== i).map(r => r.filter((_, c) => c !== j));
+          cof[i][j] = ((i+j)%2===0 ? 1:-1) * det(minor);
+        }
+      }
+      const adj = cof[0].map((_, j) => cof.map(r => r[j]));
+      return adj.map(r => r.map(v => v / D));
+    }
+
+    function multiply(inv, B) {
+      return inv.map(row => row.reduce((s, v, i) => s + v * B[i], 0));
+    }
+
+    document.getElementById('generate-btn').onclick = () => {
+      const n = parseInt(document.getElementById('size').value);
+      if (n>=2 && n<=6) createInputs(n);
+    };
+    document.getElementById('solve-btn').onclick = () => {
+      const n = parseInt(document.getElementById('size').value);
+      const {A, B} = readMatrix(n);
+      const inv = inverse(A);
+      const out = document.getElementById('result');
+      out.innerText = '';
+      if (!inv) return out.innerText = 'No unique solution: matrix is singular.';
+      const sol = multiply(inv, B);
+      out.innerText = sol.map((v,i) => `X${i+1} = ${v.toFixed(4)}`).join(',  ');
+    };
+
+    // initialize with 2x2 inputs
+    createInputs(2);
+  </script>
 </body>
 </html>
